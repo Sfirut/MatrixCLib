@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <time.h>
 #include <math.h>
+#include "matrix.h"
 
 float** matrix_input(int n, int m) {
     if (n <= 0 || m <= 0) {
