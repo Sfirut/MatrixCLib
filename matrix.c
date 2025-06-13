@@ -54,7 +54,6 @@ void mergeSortAsc(float arr[], int left, int right) {
     }
 }
 
-
 void mergeDesc(float arr[], int left, int mid, int right) {
     int n1 = mid - left + 1;
     int n2 = right - mid;
@@ -232,9 +231,11 @@ float** matrix_copy(float** matrix, int n, int m) {
     return copy;
 }
 
-void matrix_free(float** matrix) {
+void matrix_free(float** matrix, int n) {
     if (!matrix) return;
-    for (int i = 0; matrix[i]; i++) free(matrix[i]);
+    for (int i = 0; i < n; i++) {
+        free(matrix[i]);
+    }
     free(matrix);
 }
 
@@ -252,7 +253,7 @@ void matrix_print(float** matrix, int n, int m) {
     }
 }
 
-int matrix_savef(float** matrix, int n, int m, char* filename) {
+int matrix_savef(float** matrix, int n, int m, const char* filename) {
     if (!matrix || n <= 0 || m <= 0 || !filename) {
         fprintf(stderr, "Error: Invalid input\n");
         return -1;
@@ -276,7 +277,7 @@ int matrix_savef(float** matrix, int n, int m, char* filename) {
     return 0;
 }
 
-float** matrix_loadf(char* filename) {
+float** matrix_loadf(const char* filename) {
     if (!filename) {
         fprintf(stderr, "Error: Invalid filename\n");
         return NULL;
@@ -405,7 +406,7 @@ float** matrix_multpscl(float** matrix, int n, int m, float scalar) {
 }
 
 float** matrix_power(float** matrix, int n, int p) {
-    if (!matrix || n <= 0 || p < 0 || p > 102) {
+    if (!matrix || n <= 0 || p < 0) {
         fprintf(stderr, "Error: Invalid input\n");
         return NULL;
     }
@@ -423,10 +424,10 @@ float** matrix_power(float** matrix, int n, int p) {
     for (int pow = 1; pow < p; pow++) {
         float** temp = matrix_multp(result, matrix, n, n, n);
         if (!temp) {
-            matrix_free(result);
+            matrix_free(result, n);
             return NULL;
         }
-        matrix_free(result);
+        matrix_free(result, n);
         result = temp;
     }
     return result;
@@ -479,7 +480,7 @@ float matrix_determin(float** matrix, int n) {
         sign = -sign;
     }
 
-    matrix_free(temp);
+    matrix_free(temp, n);
     return det;
 }
 
@@ -500,7 +501,7 @@ float** matrix_inver(float** matrix, int n) {
 
     float** temp = matrix_createv(n, n);
     if (!temp) {
-        matrix_free(adj);
+        matrix_free(adj, n);
         return NULL;
     }
 
@@ -523,11 +524,11 @@ float** matrix_inver(float** matrix, int n) {
         }
     }
 
-    matrix_free(temp);
+    matrix_free(temp, n);
 
     float** inverse = matrix_createv(n, n);
     if (!inverse) {
-        matrix_free(adj);
+        matrix_free(adj, n);
         return NULL;
     }
 
@@ -537,7 +538,7 @@ float** matrix_inver(float** matrix, int n) {
         }
     }
 
-    matrix_free(adj);
+    matrix_free(adj, n);
     return inverse;
 }
 
@@ -556,7 +557,7 @@ float matrix_trace(float** matrix, int n) {
 
 float** matrix_norm(float** matrix, int n, int m) {
     if (!matrix || n <= 0 || m <= 0) {
-        printf("Error: Invalid input\n");
+        fprintf(stderr, "Error: Invalid input\n");
         return NULL;
     }
     
@@ -569,17 +570,20 @@ float** matrix_norm(float** matrix, int n, int m) {
     }
     
     if (max == min) {
-        printf("Error: Cannot normalize matrix with same values\n");
+        fprintf(stderr, "Error: Cannot normalize matrix with same values\n");
         return NULL;
     }
     
+    float** result = matrix_copy(matrix, n, m);
+    if (!result) return NULL;
+    
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < m; j++) {
-            matrix[i][j] = (matrix[i][j] - min) / (max - min);
+            result[i][j] = (result[i][j] - min) / (max - min);
         }
     }
     
-    return matrix;
+    return result;
 }
 
 float* matrix_getrow(float** matrix, int n, int m, int row) {
@@ -620,50 +624,44 @@ float* matrix_getcol(float** matrix, int n, int m, int col) {
     return col_vector;
 }
 
-float** matrix_setrow(float** matrix, int n, int m, int row, float* mas, size_t size_mas) {
+float** matrix_setrow(float** matrix, int n, int m, int row, const float* mas, size_t size_mas) {
     if (matrix == NULL || mas == NULL || n <= 0 || m <= 0 || row < 0 || row >= n || size_mas <= 0) {
         fprintf(stderr, "Error: Invalid input\n");
         return NULL;
     }
 
-    for (int j = 0; j < m; j++) {
-        if (j < size_mas) {
-            matrix[row][j] = mas[j]; 
-        } else {
-            matrix[row][j] = 0.0; 
-        }
+    size_t cols_to_copy = (size_mas < (size_t)m) ? size_mas : (size_t)m;
+    for (size_t j = 0; j < cols_to_copy; j++) {
+        matrix[row][j] = mas[j];
     }
 
     return matrix;
 }
 
-float** matrix_setcol(float** matrix, int n, int m, int col, float* mas, size_t size_mas) {
+float** matrix_setcol(float** matrix, int n, int m, int col, const float* mas, size_t size_mas) {
     if (matrix == NULL || mas == NULL || n <= 0 || m <= 0 || col < 0 || col >= m || size_mas <= 0) {
         fprintf(stderr, "Error: Invalid input\n");
         return NULL;
     }
 
-    for (int j = 0; j < n; j++) {
-        if (j < size_mas) {
-            matrix[j][col] = mas[j];  
-        } else {
-            matrix[j][col] = 0.0;  
-        }
+    size_t rows_to_copy = (size_mas < (size_t)n) ? size_mas : (size_t)n;
+    for (size_t j = 0; j < rows_to_copy; j++) {
+        matrix[j][col] = mas[j];
     }
 
-    return matrix;  
+    return matrix;
 }
 
 float matrix_min(float** matrix, int n, int m) {
     if (matrix == NULL || n <= 0 || m <= 0) {
         fprintf(stderr, "Error: Invalid input\n");
-        return FLT_MAX;  
+        return FLT_MAX;
     }
 
-    float min_value = matrix[0][0]; 
+    float min_value = matrix[0][0];
 
     for (int i = 0; i < n; i++) {
-        if (matrix[i] == NULL) {  
+        if (matrix[i] == NULL) {
             fprintf(stderr, "Error: Invalid line #%d\n", i);
             return FLT_MAX;
         }
@@ -680,15 +678,15 @@ float matrix_min(float** matrix, int n, int m) {
 float matrix_max(float** matrix, int n, int m) {
     if (matrix == NULL || n <= 0 || m <= 0) {
         fprintf(stderr, "Error: Invalid input\n");
-        return FLT_MIN;  
+        return -FLT_MAX;
     }
 
-    float max_value = matrix[0][0]; 
+    float max_value = matrix[0][0];
 
     for (int i = 0; i < n; i++) {
-        if (matrix[i] == NULL) { 
+        if (matrix[i] == NULL) {
             fprintf(stderr, "Error: Invalid line #%d\n", i);
-            return FLT_MIN;
+            return -FLT_MAX;
         }
         for (int j = 0; j < m; j++) {
             if (matrix[i][j] > max_value) {
@@ -717,7 +715,7 @@ float* matrix_colmean(float** matrix, int n, int m) {
         for (int i = 0; i < n; i++) {
             sum += matrix[i][j];
         }
-        col_means[j] = sum / n;  
+        col_means[j] = sum / n;
     }
 
     return col_means;
@@ -740,7 +738,7 @@ float* matrix_rowmean(float** matrix, int n, int m) {
         for (int j = 0; j < m; j++) {
             sum += matrix[i][j];
         }
-        row_means[i] = sum / m;  
+        row_means[i] = sum / m;
     }
 
     return row_means;
@@ -754,7 +752,7 @@ bool matrix_issym(float** matrix, int n) {
 
     for (int i = 0; i < n; i++) {
         for (int j = i + 1; j < n; j++) {
-            if (matrix[i][j] != matrix[j][i]) {
+            if (fabs(matrix[i][j] - matrix[j][i]) > 1e-6) {
                 return false;
             }
         }
@@ -770,7 +768,8 @@ bool matrix_isiden(float** matrix, int n) {
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-            if ((i == j && matrix[i][j] != 1.0) || (i != j && matrix[i][j] != 0.0)) {
+            if ((i == j && fabs(matrix[i][j] - 1.0) > 1e-6) || 
+                (i != j && fabs(matrix[i][j]) > 1e-6)) {
                 return false;
             }
         }
@@ -786,7 +785,7 @@ bool matrix_isdiag(float** matrix, int n) {
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-            if (i != j && matrix[i][j] != 0.0) {
+            if (i != j && fabs(matrix[i][j]) > 1e-6) {
                 return false;
             }
         }
